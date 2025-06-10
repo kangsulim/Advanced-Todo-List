@@ -4,49 +4,57 @@ import type { Todo } from './types/Todo';
 import TodoForm from "./components/TodoForm"
 import {TodoList} from "./components/TodoList"
 import { getAllTodos, addTodoApi, toggleTodoApi, deleteTodoApi } from './services/todoService';
-// import { v4 as uuid } from 'uuid';
+import axios from 'axios';
+import { GoogleLogin, type CredentialResponse} from '@react-oauth/google';
 
 function App() {
-  // 로컬 스토리지에서의 사용법
-  // const [ todos, setTodos ] = useState<Todo[]>(() => {
-  //   const storedTodos = localStorage.getItem('todos');
-  //   return storedTodos ? JSON.parse(storedTodos): [];
-  // });
 
   const [ todos, setTodos ] = useState<Todo[]>([]);
-  const [ isLoading, setIsLoading ] = useState<boolean>(true);
+  const [ isLoading, setIsLoading ] = useState<boolean>(false);
+  const [ authToken, setAuthToken ] = useState<string | null>(() => localStorage.getItem('authToken'));
 
+  const handleLoginSuccess = (credentialResponse: CredentialResponse) => {
+    const idToken = credentialResponse.credential;
+
+    if (idToken) {
+      setAuthToken(idToken);
+      localStorage.setItem('authToken', idToken);
+    }
+  }
+
+  const handleLoginError = () => {
+    console.log('로그인 실패')
+  }
+
+  const handleLogout = () => {
+    setAuthToken(null);
+    localStorage.removeItem('authToken');
+    setTodos([]);
+  }
 
   // 최초 랜더링 시 useEffect
   useEffect(() => {
     const fetchTodosFromServer = async (): Promise<void> => {
-      try{
-        setIsLoading(true);
-        const serverTodos = await getAllTodos();
-        setTodos(serverTodos);
-      } catch (error) {
-        console.log('서버에서 데이터를 가져오기 실패 : ', error)
-      } finally {
-        setIsLoading(false);
+      if (authToken) {
+        try {
+          setIsLoading(true);
+          const serverTodos = await getAllTodos();
+          setTodos(serverTodos);
+        } catch (error) {
+          console.log('서버에서 데이터를 가져오는 데 실패했습니다: ', error);
+          if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+            handleLogout();
+          }
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
     fetchTodosFromServer();
-  }, []);
-
-  // uuid를 사용하는 로컬
-  // const addTodo = (text: string) => {
-  //   const newTodo: Todo = {
-  //     id: uuid(),
-  //     text,
-  //     completed: false,
-  //   }
-  //   const updatedTodos = [ ...todos, newTodo ];
-  //   console.log('updatedTodos --->', updatedTodos);
-  //   setTodos(updatedTodos);
-  //   localStorage.setItem('todos', JSON.stringify(updatedTodos));
-  // }
+  }, [authToken]);
 
   const handleAddTodo = async (text: string): Promise<void> => {
+    if (!authToken) return;
     try {
       setIsLoading(true);
       const newTodo = await addTodoApi(text);
@@ -56,20 +64,8 @@ function App() {
     }
   }
 
-  // uuid 사용하는 로컬의 delete update
-  // const deleteTodo = (id: string) => {
-  //   const updatedTodos = todos.filter((todo) => todo.id !== id);
-  //   setTodos(updatedTodos);
-  //   localStorage.setItem('todos', JSON.stringify(updatedTodos));
-  // }
-
-  // const toggleComplete = (id: string) => {
-  //   const updatedTodos = todos.map((todo) => todo.id === id ? {...todo, completed: !todo.completed } : todo );
-  //   setTodos(updatedTodos);
-  //   localStorage.setItem('todos', JSON.stringify(updatedTodos));
-  // }
-
   const handleToggleComplete = async (id: number): Promise<void> => {
+    if (!authToken) return;
     try {
       const todoToToggle = todos.find(todo => todo.id === id);
       if (!todoToToggle) return;
@@ -83,6 +79,7 @@ function App() {
   }
 
   const handleDeleteTodo = async (id: number): Promise<void> => {
+    if (!authToken) return;
     try {
       await deleteTodoApi(id);
       setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
@@ -93,15 +90,39 @@ function App() {
 
   return (
     <div>
-      <h1>Todo List</h1>
-      <TodoForm onAddTodo={handleAddTodo}/>
-      {/* //Todoform -> 투두를 입력하면 */
-        isLoading ? (
-          <p>목록을 불러오는 중입니다...</p>
-        ) : (
-          <TodoList todos={todos} onToggleComplete={handleToggleComplete} onDeleteTodo={handleDeleteTodo}/>
-        )
-      }
+      <header style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem'}}>
+        <h1>Todo List</h1>
+        <div>
+          {
+            authToken ? (
+              <button onClick={handleLogout}>Logout</button>
+            ) : (
+              <GoogleLogin onSuccess={handleLoginSuccess} onError={handleLoginError}>
+
+              </GoogleLogin>
+            )
+          }
+        </div>
+      </header>
+      <main>
+        {
+          authToken ? (
+            isLoading ? (
+              <p>목록을 불러오는 중입니다...</p>
+            ) : (
+              <>
+                <TodoForm onAddTodo={handleAddTodo}/>
+                <TodoList todos={todos} onToggleComplete={handleToggleComplete} onDeleteTodo={handleDeleteTodo}/>
+              </>
+            )
+          ) : (
+            <h2>로그인 후에 Todo List를 작성하시오</h2>
+          )
+        }
+      </main>
+      
+        
+      
     </div>
   )
 }

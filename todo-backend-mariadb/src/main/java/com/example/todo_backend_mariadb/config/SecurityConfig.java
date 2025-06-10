@@ -17,18 +17,34 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
+//      Oauth2 적용 전
+//    @Bean
+//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+//        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+//                .csrf(csrf -> csrf.disable())
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//                .authorizeHttpRequests(authz ->
+//                        // preflight 요청(OPTION METHOD)은 인증 없이 모두 허용
+//                        authz.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+//                                // 현재 로그인 기능이 따로 없으므로, 모든 API 요청을 임시로 허용
+//                        .requestMatchers("/api/**").permitAll()
+//                                // 혹시 모를 나머지 모든 요청도 일단 허용
+//                        .anyRequest().permitAll()
+//                );
+//        return http.build();
+//    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authz -> 
+                .authorizeHttpRequests(authz ->
                         // preflight 요청(OPTION METHOD)은 인증 없이 모두 허용
                         authz.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 // 현재 로그인 기능이 따로 없으므로, 모든 API 요청을 임시로 허용
-                        .requestMatchers("/api/**").permitAll()
-                                // 혹시 모를 나머지 모든 요청도 일단 허용
-                        .anyRequest().permitAll()
+                                .requestMatchers("/api/**").authenticated()
+                                .anyRequest().authenticated()
                 );
         return http.build();
     }
@@ -38,7 +54,7 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5174"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PATCH", "DELETE", "OPTIONS", "PUT"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type"));
         configuration.setAllowCredentials(true);
