@@ -38,6 +38,7 @@ export const deleteTodoApi = async (id: number): Promise<void> => {
   try {
     await apiClient.delete(`/todos/${id}`);
   } catch (error) {
-    console.log(`Error delete: ${id}`, error);
+    console.log(`Error deleteTodo: ${id}`, error);
+    throw error;
   }
 }

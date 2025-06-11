@@ -59,8 +59,12 @@ function App() {
       setIsLoading(true);
       const newTodo = await addTodoApi(text);
       setTodos(prevTodos => [...prevTodos, newTodo]);
+      getAllTodos();
+      setIsLoading(false);
     } catch (error) {
       console.log(`todo를 추가하는 데 실패했습니다 : `, error);
+    } finally {
+      setIsLoading(false);
     }
   }
 

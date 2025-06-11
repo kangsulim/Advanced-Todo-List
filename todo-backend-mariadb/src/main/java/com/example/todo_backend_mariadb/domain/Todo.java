@@ -16,7 +16,7 @@ public class Todo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false, updatable = false)
-    private Long TodoId;
+    private Long id;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String text;
